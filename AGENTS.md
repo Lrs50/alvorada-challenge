@@ -5,6 +5,7 @@ Sales pipeline: loads Olist CSVs into PostgreSQL; SQL answers sales, category-ra
 ## Commands
 
 - `make setup` install env (`uv sync`); `make lint` ruff check + format check.
+- `make up` / `make down` start / stop Postgres (Docker). Defaults work without a `.env`; copy `.env.example` to override.
 - Use `uv` for everything; never `pip`. Add new targets here when they exist.
 
 ## Rules
