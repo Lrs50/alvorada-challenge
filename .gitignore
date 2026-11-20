@@ -1,0 +1,13 @@
+target/
+bash.exe.stackdump
+
+# Python
+.venv/
+__pycache__/
+.ruff_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Local configuration and data
+.env
+data/*.csv
