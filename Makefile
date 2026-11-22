@@ -1,7 +1,7 @@
 -include .env
 .EXPORT_ALL_VARIABLES:
 
-.PHONY: setup lint test up down migrate load
+.PHONY: setup lint test up down migrate load run
 
 setup:
 	uv sync
@@ -24,3 +24,6 @@ migrate:
 
 load:
 	uv run python -m olist_pipeline.load
+
+run: up
+	uv run python -m olist_pipeline.run

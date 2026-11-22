@@ -1,6 +1,6 @@
-from olist_pipeline.migrate import migrate
+from olist_pipeline.migrate import MIGRATIONS, migrate
 
-VERSIONS = ["001_raw_tables", "002_core_tables", "003_ops_tables"]
+VERSIONS = sorted(path.stem for path in MIGRATIONS.glob("*.sql"))
 TABLES = ["orders", "order_items", "order_payments", "customers", "products"]
 
 ALL_TABLES = """
