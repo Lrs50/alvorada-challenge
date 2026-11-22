@@ -18,10 +18,10 @@ def query(conn, name):
 if __name__ == "__main__":
     RESULTS.mkdir(exist_ok=True)
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
-        columns, rows = query(conn, "q1_sales_by_month_state")
-    path = RESULTS / "q1_sales_by_month_state.csv"
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f, lineterminator="\n")
-        writer.writerow(columns)
-        writer.writerows(rows)
-    print(f"{path.name}: {len(rows)} rows")
+        for path in sorted(QUERIES.glob("*.sql")):
+            columns, rows = query(conn, path.stem)
+            with open(RESULTS / f"{path.stem}.csv", "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f, lineterminator="\n")
+                writer.writerow(columns)
+                writer.writerows(rows)
+            print(f"{path.stem}.csv: {len(rows)} rows")
