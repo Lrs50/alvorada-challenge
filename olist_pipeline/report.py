@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import psycopg
 ROOT = Path(__file__).parent.parent
 QUERIES = ROOT / "sql" / "queries"
 RESULTS = ROOT / "results"
+DASHBOARD = Path(__file__).with_name("dashboard.html")
 
 
 def query(conn, name):
@@ -15,13 +17,24 @@ def query(conn, name):
     return [column.name for column in cur.description], cur.fetchall()
 
 
+def render_dashboard(results):
+    """Put the query results into the dashboard template as JSON."""
+    data = json.dumps(results, default=str).replace("</", "<\\/")
+    return DASHBOARD.read_text(encoding="utf-8").replace("__DATA__", data)
+
+
 if __name__ == "__main__":
     RESULTS.mkdir(exist_ok=True)
+    results = {}
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
         for path in sorted(QUERIES.glob("*.sql")):
             columns, rows = query(conn, path.stem)
+            results[path.stem] = {"columns": columns, "rows": rows}
             with open(RESULTS / f"{path.stem}.csv", "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f, lineterminator="\n")
                 writer.writerow(columns)
                 writer.writerows(rows)
             print(f"{path.stem}.csv: {len(rows)} rows")
+    with open(RESULTS / "dashboard.html", "w", newline="", encoding="utf-8") as f:
+        f.write(render_dashboard(results))
+    print("dashboard.html written")
