@@ -1,7 +1,7 @@
 -include .env
 .EXPORT_ALL_VARIABLES:
 
-.PHONY: setup lint test up down migrate load run
+.PHONY: setup lint test up down migrate load run report
 
 setup:
 	uv sync
@@ -9,6 +9,9 @@ setup:
 lint:
 	uv run ruff check .
 	uv run ruff format --check .
+
+report: up
+	uv run python -m olist_pipeline.report
 
 test: up
 	uv run pytest

@@ -9,6 +9,7 @@ Sales pipeline: loads Olist CSVs into PostgreSQL; SQL answers sales, category-ra
 - `make migrate` apply `sql/migrations/*.sql` (numbered, append-only: never edit an applied file).
 - `make load` replace the `raw` tables with the CSVs in `data/` (one transaction; run `make migrate` first).
 - `make run` start Postgres, then migrate, load, transform and log the run in `ops.pipeline_runs`.
+- `make report` run the question queries in `sql/queries/` and write `results/*.csv` (run `make run` first).
 - `make test` start Postgres, then run pytest.
 - `make up` / `make down` start / stop Postgres (Docker).
 - Use `uv` for everything; never `pip`. Add new targets here when they exist.
