@@ -1,0 +1,2 @@
+order_id,customer_id,order_status,order_purchase_timestamp,order_approved_at,order_delivered_carrier_date,order_delivered_customer_date
+o9,c9,delivered,2017-05-01 10:00:00,2017-05-01 10:10:00,2017-05-02 09:00:00,2017-05-05 15:00:00
