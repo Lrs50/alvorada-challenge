@@ -371,26 +371,24 @@ name = "olist-pipeline"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "ipykernel" },
-    { name = "pandas" },
     { name = "psycopg", extra = ["binary"] },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "ipykernel" },
+    { name = "pandas" },
     { name = "pytest" },
     { name = "ruff" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "ipykernel", specifier = ">=7.4.0" },
-    { name = "pandas", specifier = ">=3.1.1" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.9" },
-]
+requires-dist = [{ name = "psycopg", extras = ["binary"], specifier = ">=3.3.9" }]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "ipykernel", specifier = ">=7.4.0" },
+    { name = "pandas", specifier = ">=3.1.1" },
     { name = "pytest" },
     { name = "ruff" },
 ]

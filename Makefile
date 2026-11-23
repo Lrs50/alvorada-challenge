@@ -1,7 +1,7 @@
 -include .env
 .EXPORT_ALL_VARIABLES:
 
-.PHONY: setup lint test up down migrate load run report
+.PHONY: setup lint test up down migrate load run report audit
 
 setup:
 	uv sync
@@ -12,6 +12,9 @@ lint:
 
 report: up
 	uv run python -m olist_pipeline.report
+
+audit:
+	uv run python -m audit.oracle
 
 test: up
 	uv run pytest
