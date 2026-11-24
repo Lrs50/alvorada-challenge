@@ -1,19 +1,16 @@
 import csv
 import json
-import os
-from pathlib import Path
 
-import psycopg
+from olist_pipeline.config import RESULTS, ROOT, SQL
+from olist_pipeline.db import read_sql
 
-ROOT = Path(__file__).parent.parent
-QUERIES = ROOT / "sql" / "queries"
-RESULTS = ROOT / "results"
-DASHBOARD = Path(__file__).with_name("dashboard.html")
+QUERIES = SQL / "queries"
+DASHBOARD = ROOT / "olist_pipeline" / "dashboard_template.html"
 
 
 def query(conn, name):
     """Run sql/queries/<name>.sql and return its column names and rows."""
-    cur = conn.execute((QUERIES / f"{name}.sql").read_text(encoding="utf-8"))
+    cur = conn.execute(read_sql(QUERIES, name))
     return [column.name for column in cur.description], cur.fetchall()
 
 
@@ -23,18 +20,17 @@ def render_dashboard(results):
     return DASHBOARD.read_text(encoding="utf-8").replace("__DATA__", data)
 
 
-if __name__ == "__main__":
-    RESULTS.mkdir(exist_ok=True)
+def report(conn, results_dir=RESULTS):
+    """Run every query in sql/queries, write results/*.csv and the dashboard, return the results."""
+    results_dir.mkdir(exist_ok=True)
     results = {}
-    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
-        for path in sorted(QUERIES.glob("*.sql")):
-            columns, rows = query(conn, path.stem)
-            results[path.stem] = {"columns": columns, "rows": rows}
-            with open(RESULTS / f"{path.stem}.csv", "w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f, lineterminator="\n")
-                writer.writerow(columns)
-                writer.writerows(rows)
-            print(f"{path.stem}.csv: {len(rows)} rows")
-    with open(RESULTS / "dashboard.html", "w", newline="", encoding="utf-8") as f:
+    for path in sorted(QUERIES.glob("*.sql")):
+        columns, rows = query(conn, path.stem)
+        results[path.stem] = {"columns": columns, "rows": rows}
+        with (results_dir / f"{path.stem}.csv").open("w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f, lineterminator="\n")
+            writer.writerow(columns)
+            writer.writerows(rows)
+    with (results_dir / "dashboard.html").open("w", newline="", encoding="utf-8") as f:
         f.write(render_dashboard(results))
-    print("dashboard.html written")
+    return results

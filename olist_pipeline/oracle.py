@@ -1,5 +1,4 @@
 import csv
-import sys
 from decimal import Decimal
 from pathlib import Path
 
@@ -8,11 +7,6 @@ import pandas as pd
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "data"
 RESULTS = ROOT / "results"
-KINDS = {
-    "q1_sales_by_month_state": ("text", "text", "money", "int", "money"),
-    "q2_top_categories_by_month": ("text", "int", "text", "money"),
-    "q3_payment_divergences": ("text", "text", "money", "money", "money", "text"),
-}
 
 
 def read(data_dir, name, columns):
@@ -44,7 +38,13 @@ def q1(data_dir):
         sales=("price", "sum"), orders=("order_id", "nunique")
     )
     return [
-        (month, state, row.sales, row.orders, (2 * row.sales + row.orders) // (2 * row.orders))
+        (
+            month,
+            state,
+            int(row.sales),
+            int(row.orders),
+            int((2 * row.sales + row.orders) // (2 * row.orders)),
+        )
         for (month, state), row in grouped.iterrows()
     ]
 
@@ -57,7 +57,7 @@ def q2(data_dir):
     totals = totals.sort_values(["month", "price", "category"], ascending=[True, False, True])
     totals["rank"] = totals.groupby("month").cumcount() + 1
     top = totals[totals["rank"] <= 10]
-    return [(r.month, r.rank, r.category, r.price) for r in top.itertuples()]
+    return [(r.month, int(r.rank), r.category, int(r.price)) for r in top.itertuples()]
 
 
 def q3(data_dir):
@@ -70,8 +70,8 @@ def q3(data_dir):
     paid = cents(payments["payment_value"]).groupby(payments["order_id"]).sum()
     rows = []
     for order_id, status in orders.itertuples(index=False):
-        items_total = billed.get(order_id, 0)
-        paid_total = paid.get(order_id, 0)
+        items_total = int(billed.get(order_id, 0))
+        paid_total = int(paid.get(order_id, 0))
         difference = paid_total - items_total
         if order_id not in paid.index:
             reason = "no payment"
@@ -85,37 +85,47 @@ def q3(data_dir):
     return sorted(rows, key=lambda row: (-abs(row[4]), row[0]))
 
 
-def published(name):
+QUESTIONS = [
+    (
+        "q1_sales_by_month_state",
+        "sales by month and state",
+        q1,
+        ("text", "text", "money", "int", "money"),
+    ),
+    ("q2_top_categories_by_month", "top categories by month", q2, ("text", "int", "text", "money")),
+    (
+        "q3_payment_divergences",
+        "payment divergences",
+        q3,
+        ("text", "text", "money", "money", "money", "text"),
+    ),
+]
+
+
+def published(results_dir, name, kinds):
     convert = {"text": str, "int": int, "money": lambda cell: int(Decimal(cell) * 100)}
-    with open(RESULTS / f"{name}.csv", newline="", encoding="utf-8") as f:
+    with (results_dir / f"{name}.csv").open(newline="", encoding="utf-8") as f:
         reader = csv.reader(f)
         next(reader)
-        kinds = KINDS[name]
         return [tuple(convert[k](cell) for k, cell in zip(kinds, r, strict=True)) for r in reader]
 
 
-def main(data_dir=DATA):
-    differences = 0
-    for name, compute in [
-        ("q1_sales_by_month_state", q1),
-        ("q2_top_categories_by_month", q2),
-        ("q3_payment_divergences", q3),
+def show_differences(label, oracle, sql):
+    print(f"Mismatch in {label}: oracle has {len(oracle)} rows, results have {len(sql)}")
+    for side, rows in [
+        ("only in oracle", set(oracle) - set(sql)),
+        ("only in results", set(sql) - set(oracle)),
     ]:
-        oracle = compute(data_dir)
-        sql = published(name)
-        if oracle == sql:
-            print(f"{name}: {len(sql)} rows match")
-            continue
-        differences += 1
-        print(f"{name}: MISMATCH (oracle {len(oracle)} rows, results {len(sql)} rows)")
-        for label, rows in [
-            ("only in oracle", set(oracle) - set(sql)),
-            ("only in results", set(sql) - set(oracle)),
-        ]:
-            for row in sorted(rows)[:5]:
-                print(f"  {label}: {row}")
-    return differences
+        for row in sorted(rows)[:5]:
+            print(f"  {side}: {row}")
 
 
-if __name__ == "__main__":
-    sys.exit(1 if main() else 0)
+def main(data_dir=DATA, results_dir=RESULTS):
+    """Recompute every answer from the CSVs and return the labels of those that differ."""
+    wrong = []
+    for name, label, compute, kinds in QUESTIONS:
+        oracle, sql = compute(data_dir), published(results_dir, name, kinds)
+        if oracle != sql:
+            show_differences(label, oracle, sql)
+            wrong.append(label)
+    return wrong

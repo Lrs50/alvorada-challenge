@@ -243,7 +243,8 @@ button.ghost:disabled { opacity: 0.4; cursor: default; background: var(--surface
 
 <script id="data" type="application/json">__DATA__</script>
 <script>
-const raw = JSON.parse(document.getElementById("data").textContent);
+const $ = (id) => document.getElementById(id);
+const raw = JSON.parse($("data").textContent);
 const table = (name) => raw[name].rows.map((r) => Object.fromEntries(r.map((v, i) => [raw[name].columns[i], v])));
 const cents = (s) => Math.round(parseFloat(s) * 100);
 const nf = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -279,9 +280,8 @@ const PAGE = 25;
 const sum = (rows, key) => rows.reduce((t, r) => t + r[key], 0);
 const ticketOf = (rows) =>
   rows.length === 1 ? "R$ " + rows[0].ticket : "R$ " + nf.format(sum(rows, "cents") / sum(rows, "orders") / 100);
-const bestMonth = months.reduce((best, m) =>
-  sum(sales.filter((r) => r.month === m), "cents") > sum(sales.filter((r) => r.month === best), "cents") ? m : best);
 const monthCents = (m) => sum(sales.filter((r) => r.month === m), "cents");
+const bestMonth = months.reduce((best, m) => (monthCents(m) > monthCents(best) ? m : best));
 const small = months.filter((m) => monthCents(m) < 0.05 * monthCents(bestMonth));
 const view = { state: "All", month: bestMonth, reason: null, page: 0 };
 
@@ -291,13 +291,19 @@ function node(tag, cls, text) {
   if (text !== undefined) e.textContent = text;
   return e;
 }
+function headRow(labels, isNum) {
+  const tr = node("tr");
+  labels.forEach((h, i) => tr.append(node("th", isNum(i) ? "num" : "", h)));
+  return tr;
+}
+const neutral = (reason) => (reason === "no items" ? " neutral" : "");
 function svg(tag, attrs) {
   const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
   for (const k in attrs) e.setAttribute(k, attrs[k]);
   return e;
 }
 
-const tip = document.getElementById("tip");
+const tip = $("tip");
 function showTip(x, y, head, lines) {
   tip.replaceChildren(node("strong", "", head), ...lines.map((l) => node("span", "", l)).flatMap((s) => [s, node("br")]).slice(0, -1));
   tip.hidden = false;
@@ -308,13 +314,13 @@ function showTip(x, y, head, lines) {
 const hideTip = () => { tip.hidden = true; };
 
 function renderSummary() {
-  document.getElementById("sub").textContent =
+  $("sub").textContent =
     "Delivered orders, " + monthName(months[0]) + " to " + monthName(months[months.length - 1]) + ".";
-  document.getElementById("hero").textContent = money(sum(sales, "cents"));
-  document.getElementById("orders").textContent = whole(sum(sales, "orders"));
-  document.getElementById("ticket").textContent = ticketOf(sales);
-  document.getElementById("flagged").textContent = whole(flagged.length);
-  document.getElementById("foot").textContent = "Click a month to see its top categories." +
+  $("hero").textContent = money(sum(sales, "cents"));
+  $("orders").textContent = whole(sum(sales, "orders"));
+  $("ticket").textContent = ticketOf(sales);
+  $("flagged").textContent = whole(flagged.length);
+  $("foot").textContent = "Click a month to see its top categories." +
     (small.length ? " " + small.map(monthName).join(", ") + " each have under 5% of the best month's sales." : "");
 }
 
@@ -338,7 +344,7 @@ function monthRows(m) {
 
 let drawnWidth = 0;
 function renderChart() {
-  const chart = document.getElementById("chart");
+  const chart = $("chart");
   const W = Math.max(chart.clientWidth, 600), H = 300, left = 72, right = 4, top = 12, bottom = 48;
   drawnWidth = chart.clientWidth;
   chart.setAttribute("viewBox", `0 0 ${W} ${H}`);
@@ -379,15 +385,16 @@ function renderChart() {
     g.addEventListener("focus", tipAt);
     g.addEventListener("pointerleave", hideTip);
     g.addEventListener("blur", hideTip);
-    g.addEventListener("click", () => { view.month = m; renderMonth(); });
+    const pick = () => { view.month = m; renderMonth(); };
+    g.addEventListener("click", pick);
     g.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); view.month = m; renderMonth(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); }
     });
   });
 }
 
 function renderPicked() {
-  const rows = monthRows(view.month), p = document.getElementById("picked");
+  const rows = monthRows(view.month), p = $("picked");
   const scope = view.state === "All" ? "all states" : view.state;
   p.replaceChildren(node("strong", "", monthName(view.month)));
   p.append(document.createTextNode(rows.length
@@ -396,11 +403,9 @@ function renderPicked() {
 }
 
 function renderMonthTable() {
-  const t = document.getElementById("month-table");
+  const t = $("month-table");
   t.replaceChildren();
-  const head = node("tr");
-  ["Month", "Sales", "Orders", "Average ticket"].forEach((h, i) => head.append(Object.assign(node("th", i ? "num" : "", h))));
-  t.append(head);
+  t.append(headRow(["Month", "Sales", "Orders", "Average ticket"], (i) => i > 0));
   months.forEach((m) => {
     const rows = monthRows(m), tr = node("tr");
     tr.append(node("td", "", monthName(m)), node("td", "num", money(sum(rows, "cents"))),
@@ -411,8 +416,8 @@ function renderMonthTable() {
 
 function renderCats() {
   const rows = cats.filter((r) => r.month === view.month);
-  document.getElementById("cats-title").textContent = "Top 10 categories, " + monthName(view.month);
-  const list = document.getElementById("cats");
+  $("cats-title").textContent = "Top 10 categories, " + monthName(view.month);
+  const list = $("cats");
   list.replaceChildren();
   if (!rows.length) {
     list.append(node("li", "note", "No delivered orders in this month."));
@@ -433,62 +438,61 @@ function renderCats() {
 function renderRecon() {
   const counts = Object.fromEntries(REASONS.map((r) => [r, flagged.filter((f) => f.reason === r).length]));
   const mism = flagged.length - counts["no items"];
-  document.getElementById("recon-sub").textContent = whole(flagged.length) + " orders flagged, every status included.";
-  document.getElementById("recon-note").textContent =
+  $("recon-sub").textContent = whole(flagged.length) + " orders flagged, every status included.";
+  $("recon-note").textContent =
     "No items means the order has payments but nothing billed. The other " + whole(mism) +
     " orders have a payment that does not match what was billed, or no payment at all. Click a reason to filter the table.";
-  const box = document.getElementById("reasons");
+  const box = $("reasons");
   box.replaceChildren();
   const max = Math.max(...Object.values(counts), 1);
   REASONS.forEach((reason) => {
-    const b = node("button", "reason" + (reason === "no items" ? " neutral" : ""));
+    const b = node("button", "reason" + neutral(reason));
     b.type = "button";
     b.setAttribute("aria-pressed", String(view.reason === reason));
     const fill = node("div", "fill");
     fill.style.width = (counts[reason] / max) * 100 + "%";
     b.append(node("span", "", reason), fill, node("span", "count", whole(counts[reason])));
-    b.addEventListener("click", () => { view.reason = view.reason === reason ? null : reason; view.page = 0; renderRecon(); renderFlagged(); });
+    b.addEventListener("click", () => setReason(view.reason === reason ? null : reason));
     box.append(b);
   });
 }
 
 function renderFlagged() {
   const rows = flagged.filter((f) => !view.reason || f.reason === view.reason);
-  document.getElementById("flagged-title").textContent = view.reason ? "Flagged orders: " + view.reason : "Flagged orders";
-  document.getElementById("clear").hidden = !view.reason;
-  const t = document.getElementById("flagged-table");
+  $("flagged-title").textContent = view.reason ? "Flagged orders: " + view.reason : "Flagged orders";
+  $("clear").hidden = !view.reason;
+  const t = $("flagged-table");
   t.replaceChildren();
-  const head = node("tr");
-  ["Order", "Status", "Billed", "Paid", "Difference", "Reason"].forEach((h, i) => head.append(node("th", i >= 2 && i <= 4 ? "num" : "", h)));
-  t.append(head);
+  t.append(headRow(["Order", "Status", "Billed", "Paid", "Difference", "Reason"], (i) => i >= 2 && i <= 4));
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
   view.page = Math.max(0, Math.min(view.page, pages - 1));
   const start = view.page * PAGE;
   rows.slice(start, start + PAGE).forEach((f) => {
     const tr = node("tr"), id = node("td", "id", f.id), reason = node("td"), sign = f.diff > 0 ? "+" : f.diff < 0 ? "−" : "";
     id.title = f.id;
-    reason.append(node("span", "dot" + (f.reason === "no items" ? " neutral" : "")), document.createTextNode(f.reason));
+    reason.append(node("span", "dot" + neutral(f.reason)), document.createTextNode(f.reason));
     tr.append(id, node("td", "", f.status), node("td", "num", nf.format(f.billed / 100)), node("td", "num", nf.format(f.paid / 100)),
       node("td", "num diff", sign + nf.format(Math.abs(f.diff) / 100)), reason);
     t.append(tr);
   });
   const end = Math.min(start + PAGE, rows.length);
-  document.getElementById("shown").textContent =
+  $("shown").textContent =
     "Showing " + whole(start + 1) + " to " + whole(end) + " of " + whole(rows.length) + ", largest difference first.";
-  document.getElementById("pages").hidden = pages === 1;
-  document.getElementById("page-of").textContent = "Page " + whole(view.page + 1) + " of " + whole(pages);
-  document.getElementById("prev").disabled = view.page === 0;
-  document.getElementById("next").disabled = view.page >= pages - 1;
+  $("pages").hidden = pages === 1;
+  $("page-of").textContent = "Page " + whole(view.page + 1) + " of " + whole(pages);
+  $("prev").disabled = view.page === 0;
+  $("next").disabled = view.page >= pages - 1;
 }
 
+function setReason(reason) { view.reason = reason; view.page = 0; renderRecon(); renderFlagged(); }
 function renderMonth() { renderChart(); renderPicked(); renderCats(); }
 
-const select = document.getElementById("state");
+const select = $("state");
 ["All", ...states].forEach((s) => select.append(Object.assign(node("option", "", s === "All" ? "All states" : s), { value: s })));
 select.addEventListener("change", () => { view.state = select.value; renderChart(); renderPicked(); renderMonthTable(); });
-document.getElementById("prev").addEventListener("click", () => { view.page--; renderFlagged(); });
-document.getElementById("next").addEventListener("click", () => { view.page++; renderFlagged(); });
-document.getElementById("clear").addEventListener("click", () => { view.reason = null; view.page = 0; renderRecon(); renderFlagged(); });
+$("prev").addEventListener("click", () => { view.page--; renderFlagged(); });
+$("next").addEventListener("click", () => { view.page++; renderFlagged(); });
+$("clear").addEventListener("click", () => setReason(null));
 
 renderSummary();
 renderMonth();
@@ -497,7 +501,7 @@ renderRecon();
 renderFlagged();
 
 new ResizeObserver(() => {
-  if (document.getElementById("chart").clientWidth !== drawnWidth) renderChart();
+  if ($("chart").clientWidth !== drawnWidth) renderChart();
 }).observe(document.querySelector(".sales"));
 </script>
 </body>
