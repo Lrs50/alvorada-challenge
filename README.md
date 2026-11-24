@@ -41,15 +41,29 @@ The five CSVs come from the [Olist dataset on Kaggle](https://www.kaggle.com/dat
 
 ## Results and querying
 
-The answers are in `results/`: `q1_sales_by_month_state.csv` (556 rows), `q2_top_categories_by_month.csv` (212 rows), `q3_payment_divergences.csv` (1,076 rows) and `dashboard.html`. The SQL for each is in `sql/queries/`. Delivered sales total R$ 13,221,498.11 over 96,478 orders, and Q3 flags 1,076 orders: 772 `no items`, 264 `paid more`, 39 `paid less` and 1 `no payment`. The first 206 rows of the Q3 file are `no items` orders, which have the largest differences.
+### Outputs
 
-To query the database yourself:
+The answers are in `results/`. The SQL for each is in `sql/queries/`.
+
+- `q1_sales_by_month_state.csv` (556 rows)
+- `q2_top_categories_by_month.csv` (212 rows)
+- `q3_payment_divergences.csv` (1,076 rows)
+- `dashboard.html`
+
+Headline figures:
+
+- Delivered sales: R$ 13,221,498.11 over 96,478 orders.
+- Q3 flags 1,076 orders: 772 `no items`, 264 `paid more`, 39 `paid less` and 1 `no payment`. The first 206 rows of the Q3 file are `no items` orders, which have the largest differences.
+
+### Querying the database
 
 ```
 docker compose exec db psql -U olist -d olist
 ```
 
-Typed data is in the `core` schema. Every run is logged in `ops.pipeline_runs` (status, rows read, loaded and rejected per run, error text on failure), and rejected rows are in `ops.reject` with their reason:
+- `core`: typed tables with primary and foreign keys.
+- `ops.pipeline_runs`: one row per run (status, rows read, loaded and rejected, error text on failure).
+- `ops.reject`: rejected rows with their reason and original values.
 
 ```sql
 select run_id, status, rows_read, rows_loaded, rows_rejected from ops.pipeline_runs;
@@ -57,9 +71,21 @@ select run_id, status, rows_read, rows_loaded, rows_rejected from ops.pipeline_r
 
 ## How it works
 
-Data moves through three schemas. `raw` holds the files as text plus a load time. `core` holds typed rows with primary and foreign keys. `ops` holds the run log and the rejected rows. Raw is replaced in one transaction, and core is rebuilt from raw in another. If the transform fails, core keeps the previous run's data while raw holds the new files, the failure is logged with its error and the command exits non-zero. A rerun starts from a clean replace of both, which is why it is safe.
+Data moves through three schemas:
 
-The logic is in SQL: `sql/migrations` creates the tables, `sql/transform` moves raw to core and rejects bad rows, and `sql/queries` has one file per question. Python in `olist_pipeline/` runs those files. `olist_pipeline/oracle.py` recomputes the three answers from the CSVs with pandas and shares no code with the pipeline. It assumes clean input, as the Olist files are.
+- `raw`: the files as text plus a load time. Replaced in one transaction.
+- `core`: typed rows rebuilt from `raw` in a second transaction.
+- `ops`: the run log and the rejected rows.
+
+If the transform fails, `core` keeps the previous run's data while `raw` holds the new files, the failure is logged with its error and the command exits non-zero. A rerun starts from a clean replace of both, which is why it is safe.
+
+The logic is in SQL and Python only runs it:
+
+- `sql/migrations`: creates the tables.
+- `sql/transform`: moves raw to core and rejects bad rows.
+- `sql/queries`: one file per question.
+- `olist_pipeline/`: runs those files and writes the results.
+- `olist_pipeline/oracle.py`: recomputes the three answers from the CSVs with pandas and shares no code with the pipeline. It assumes clean input, as the Olist files are.
 
 ## Tests
 
