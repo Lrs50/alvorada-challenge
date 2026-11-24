@@ -4,15 +4,11 @@ Sales pipeline: loads Olist CSVs into PostgreSQL; SQL answers sales, category-ra
 
 ## Commands
 
-- First time: copy `.env.example` to `.env` (the one source of config; `make` loads it). Run `migrate` and `test` through `make`, not bare `uv run`, so `DATABASE_URL` is set.
-- `make setup` install env (`uv sync`); `make lint` ruff check + format check.
-- `make migrate` apply `sql/migrations/*.sql` (numbered, append-only: never edit an applied file).
-- `make load` replace the `raw` tables with the CSVs in `data/` (one transaction; run `make migrate` first).
-- `make run` start Postgres, then migrate, load, transform and log the run in `ops.pipeline_runs`.
-- `make report` run the question queries in `sql/queries/` and write `results/*.csv` and `results/dashboard.html` (run `make run` first).
-- `make audit` recompute the three answers from `data/*.csv` with pandas and compare them to `results/*.csv` (no database needed).
-- `make test` start Postgres, then run pytest.
+- First time: copy `.env.example` to `.env` (the one source of config; `make` loads it). Run the pipeline and tests through `make`, not bare `uv run`, so `DATABASE_URL` is set.
+- `make run` start Postgres, then do everything: migrate (`sql/migrations/*.sql`, numbered, append-only: never edit an applied file; until the first release the dev database is rebuilt instead: `docker compose down -v`, then `make run`), load the CSVs in `data/` into `raw`, transform into `core`, log the run in `ops.pipeline_runs`, write `results/*.csv` and `results/dashboard.html`, validate them against the independent pandas recount in `olist_pipeline/oracle.py`, then open the dashboard in the default browser. Progress prints as it goes; it exits 1 if validation fails.
+- `make test` start Postgres, then run pytest. `make lint` ruff check + format check.
 - `make up` / `make down` start / stop Postgres (Docker).
+- One CLI: `uv run python -m olist_pipeline run|migrate|load` (`migrate` and `load` are for debugging; needs `DATABASE_URL`, so run it after `make up` with `.env` loaded, or use `make`). `uv run` installs the environment on first use.
 - Use `uv` for everything; never `pip`. Add new targets here when they exist.
 
 ## Rules
