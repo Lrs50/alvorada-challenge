@@ -1,9 +1,7 @@
-import os
-from pathlib import Path
+from olist_pipeline.config import SQL
+from olist_pipeline.db import read_sql
 
-import psycopg
-
-MIGRATIONS = Path(__file__).parent.parent / "sql" / "migrations"
+MIGRATIONS = SQL / "migrations"
 
 CREATE_MIGRATIONS_TABLE = """
 create schema if not exists ops;
@@ -24,13 +22,8 @@ def migrate(conn):
     applied = []
     for path in sorted(MIGRATIONS.glob("*.sql")):
         if path.stem not in done:
-            conn.execute(path.read_text(encoding="utf-8"))
+            conn.execute(read_sql(MIGRATIONS, path.stem))
             conn.execute(RECORD_VERSION, (path.stem,))
             conn.commit()
             applied.append(path.stem)
     return applied
-
-
-if __name__ == "__main__":
-    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
-        print("applied:", migrate(conn) or "nothing to do")

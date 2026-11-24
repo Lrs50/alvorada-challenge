@@ -1,11 +1,5 @@
 from datetime import date
 from decimal import Decimal
-from pathlib import Path
-
-from olist_pipeline.report import query
-from olist_pipeline.run import run
-
-FIXTURES = Path(__file__).parent / "fixtures"
 
 JAN = date(2017, 1, 1)
 FEB = date(2017, 2, 1)
@@ -33,8 +27,7 @@ EXPECTED = [
 ]
 
 
-def test_top_categories_by_month(conn):
-    run(conn, FIXTURES / "categories")
-    columns, rows = query(conn, "q2_top_categories_by_month")
+def test_top_categories_by_month(answer):
+    columns, rows = answer("categories", "q2_top_categories_by_month")
     assert columns == ["month", "rank", "product_category", "sales_value"]
     assert rows == EXPECTED

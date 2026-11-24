@@ -1,9 +1,6 @@
-import os
-
-import psycopg
 from psycopg.types.json import Jsonb
 
-from olist_pipeline.load import DATA, load
+from olist_pipeline.load import load
 from olist_pipeline.migrate import migrate
 from olist_pipeline.transform import transform
 
@@ -23,11 +20,15 @@ update ops.pipeline_runs set finished_at = now(), status = 'failed', error = %s 
 
 def run(conn, data_dir):
     """Migrate, load and transform. Log the run, and raise if it fails."""
-    migrate(conn)
+    applied = migrate(conn)
+    print(
+        f"Applied {len(applied)} migrations" if applied else "Migrations are up to date", flush=True
+    )
     run_id = conn.execute(START_RUN).fetchone()[0]
     conn.commit()
     try:
         read = load(conn, data_dir)
+        print("Cleaning and typing the data...", flush=True)
         transform(conn, run_id)
         rejected = dict(conn.execute(REJECT_COUNTS, (run_id,)).fetchall())
         details = {}
@@ -40,22 +41,11 @@ def run(conn, data_dir):
             }
         totals = [sum(d[key] for d in details.values()) for key in ("read", "loaded", "rejected")]
         conn.execute(FINISH_RUN, (*totals, Jsonb(details), run_id))
+        print(f"Cleaned and typed the data: {totals[2]:,} rows rejected", flush=True)
     except Exception as error:
         conn.rollback()
         conn.execute(FAIL_RUN, (str(error), run_id))
         conn.commit()
         raise
     conn.commit()
-    return run_id
-
-
-if __name__ == "__main__":
-    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
-        run_id = run(conn, DATA)
-        print(f"run {run_id} succeeded")
-        for table, counts in (
-            conn.execute("select details from ops.pipeline_runs where run_id = %s", (run_id,))
-            .fetchone()[0]
-            .items()
-        ):
-            print(f"{table}: {counts}")
+    return run_id, details

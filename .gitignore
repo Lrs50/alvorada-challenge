@@ -7,8 +7,8 @@ __pycache__/
 # Local config
 .env
 
-# Source data
-data/*.csv
-
 # Jupyter
 .ipynb_checkpoints/
+
+# Shell crash dumps
+*.stackdump

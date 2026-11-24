@@ -1,10 +1,4 @@
 from decimal import Decimal
-from pathlib import Path
-
-from olist_pipeline.report import query
-from olist_pipeline.run import run
-
-FIXTURES = Path(__file__).parent / "fixtures"
 
 # Billed = items + freight; difference = paid - billed; flagged when |difference| > 0.01,
 # or when the order has no payment at all. Every status is checked.
@@ -25,9 +19,8 @@ EXPECTED = [
 ]
 
 
-def test_payment_divergences(conn):
-    run(conn, FIXTURES / "payments")
-    columns, rows = query(conn, "q3_payment_divergences")
+def test_payment_divergences(answer):
+    columns, rows = answer("payments", "q3_payment_divergences")
     assert columns == [
         "order_id",
         "order_status",

@@ -1,35 +1,16 @@
 -include .env
 .EXPORT_ALL_VARIABLES:
 
-.PHONY: setup lint test up down migrate load run report audit
-
-setup:
-	uv sync
-
-lint:
-	uv run ruff check .
-	uv run ruff format --check .
-
-report: up
-	uv run python -m olist_pipeline.report
-
-audit:
-	uv run python -m audit.oracle
-
-test: up
-	uv run pytest
+.PHONY: up down run test lint
 
 up:
 	docker compose up -d --wait
-
 down:
 	docker compose down
-
-migrate:
-	uv run python -m olist_pipeline.migrate
-
-load:
-	uv run python -m olist_pipeline.load
-
 run: up
-	uv run python -m olist_pipeline.run
+	uv run python -m olist_pipeline run
+test: up
+	uv run pytest
+lint:
+	uv run ruff check .
+	uv run ruff format --check .

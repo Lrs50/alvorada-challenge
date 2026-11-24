@@ -1,11 +1,5 @@
 from datetime import date
 from decimal import Decimal
-from pathlib import Path
-
-from olist_pipeline.report import query
-from olist_pipeline.run import run
-
-FIXTURES = Path(__file__).parent / "fixtures"
 
 # Delivered orders only, by purchase month, price only (no freight).
 # Jan SP: o1 (10 + 20 + 5) + o2 (40) = 75.00 over 2 orders.
@@ -20,8 +14,7 @@ EXPECTED = [
 ]
 
 
-def test_sales_by_month_and_state(conn):
-    run(conn, FIXTURES / "sales")
-    columns, rows = query(conn, "q1_sales_by_month_state")
+def test_sales_by_month_and_state(answer):
+    columns, rows = answer("sales", "q1_sales_by_month_state")
     assert columns == ["month", "customer_state", "sales_value", "orders", "avg_ticket"]
     assert rows == EXPECTED

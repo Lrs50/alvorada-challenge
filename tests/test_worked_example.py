@@ -1,11 +1,8 @@
 from datetime import date
 from decimal import Decimal
-from pathlib import Path
 
 from olist_pipeline.report import query
 from olist_pipeline.run import run
-
-FIXTURES = Path(__file__).parent / "fixtures"
 
 # Three orders in January 2017, all from SP.
 #   a  delivered, books: items 60 + 40, freight 6 + 4, paid 70 + 40 = 110 (reconciled).
@@ -28,12 +25,12 @@ def answers(conn):
     return [query(conn, name)[1] for name in names]
 
 
-def test_worked_example(conn):
-    run(conn, FIXTURES / "worked_example")
+def test_worked_example(conn, fixtures):
+    run(conn, fixtures / "worked_example")
     assert answers(conn) == [Q1, Q2, Q3]
 
 
-def test_rerun_keeps_the_answers(conn):
-    run(conn, FIXTURES / "worked_example")
-    run(conn, FIXTURES / "worked_example")
+def test_rerun_keeps_the_answers(conn, fixtures):
+    run(conn, fixtures / "worked_example")
+    run(conn, fixtures / "worked_example")
     assert answers(conn) == [Q1, Q2, Q3]
