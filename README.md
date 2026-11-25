@@ -105,7 +105,7 @@ Every row passed the checks, so 0 rows were rejected. The checks stay in place f
 
 - 775 orders have no items, none of them delivered. All 775 have payment rows. 772 paid more than 0 and appear in Q3 as `no items`; the other 3 are canceled orders with a single 0.00 payment and are not flagged.
 - 1 delivered order has no payment.
-- 80 orders have payment sequence numbers that skip or do not start at 1.
+- 80 orders have no payment number 1: 78 have a single payment numbered 2, and 2 have payments numbered 2 and 3. No order has a gap after its first number.
 - 610 products have no category.
 - 303 orders differ from their billed total by more than 0.01. 249 of the 264 overpaid orders were paid in installments, which fits interest, but the data has no interest field so I could not confirm it.
 
