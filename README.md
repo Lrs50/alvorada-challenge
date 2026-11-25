@@ -7,7 +7,7 @@ An ELT pipeline for the Olist e-commerce data. Docker runs PostgreSQL 16 and uv 
 | Case       | Caso 10, sales pipeline and payment reconciliation |
 | Focus      | Correct results, and how I checked them            |
 | Time spent | About 4 hours                                      |
-| Video      | _link to be added_                               |
+| Video      | [Watch on YouTube](https://www.youtube.com/watch?v=puw4LOGezLI) |
 
 ## Quick start
 
